@@ -28,11 +28,21 @@ def _pair(line, delim, open_tag, close_tag):
 
 
 def compile_headers(line):
-    return line
+    if not line.startswith('#'):
+        return line
+
+    level = len(line) - len(line.lstrip('#'))
+
+    if level > 6 or line[level:level + 1] != ' ':
+        return line
+
+    return f'<h{level}>{line[level:]}</h{level}>'
 
 
 def compile_italic_star(line):
-    return line
+    if line.count('*') % 2 != 0:
+        return line
+    return _pair(line, '*', '<i>', '</i>')
 
 
 def compile_italic_underscore(line):
@@ -44,7 +54,9 @@ def compile_strikethrough(line):
 
 
 def compile_bold_stars(line):
-    return line
+    if line.count('**') % 2 != 0:
+        return line
+    return _pair(line, '**', '<b>', '</b>')
 
 
 def compile_bold_underscore(line):
@@ -85,4 +97,27 @@ def compile_links(line):
 
 
 def compile_images(line):
-    return line
+    out = ''
+    i = 0
+
+    while i < len(line):
+        start = line.find('![', i)
+
+        if start == -1:
+            out += line[i:]
+            break
+
+        out += line[i:start]
+        end_alt = line.find('](', start + 2)
+        end_url = line.find(')', end_alt + 2) if end_alt != -1 else -1
+
+        if end_alt == -1 or end_url == -1:
+            out += line[start:]
+            break
+
+        alt = line[start + 2:end_alt]
+        url = line[end_alt + 2:end_url]
+        out += f'<img src="{url}" alt="{alt}" />'
+        i = end_url + 1
+
+    return out
